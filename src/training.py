@@ -9,6 +9,8 @@ import os
 from typing import Tuple, List
 import numpy as np
 from tqdm import tqdm
+from game import HiveGame
+from model import HiveNetwork, SelfPlayTrainer
 
 class TrainingConfig:
     def __init__(self):
