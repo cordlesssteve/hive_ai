@@ -1,0 +1,35 @@
+2025-01-18 01:36:35,435 [INFO] Using device: cuda
+2025-01-18 01:36:35,437 [INFO] Network architecture:
+HiveNetwork(
+  (conv_blocks): Sequential(
+    (0): HiveConvBlock(
+      (conv): Conv2d(12, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (1): HiveConvBlock(
+      (conv): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (2): HiveConvBlock(
+      (conv): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (3): HiveConvBlock(
+      (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (4): HiveConvBlock(
+      (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (policy_conv): Conv2d(256, 32, kernel_size=(1, 1), stride=(1, 1))
+  (policy_bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (policy_fc): Linear(in_features=264992, out_features=8281, bias=True)
+  (value_conv): Conv2d(256, 32, kernel_size=(1, 1), stride=(1, 1))
+  (value_bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (value_fc1): Linear(in_features=264992, out_features=256, bias=True)
+  (value_fc2): Linear(in_features=256, out_features=1, bias=True)
+)
+2025-01-18 01:36:35,437 [INFO] Starting game 1/1000
+2025-01-18 01:36:35,437 [INFO] Generating self-play game...

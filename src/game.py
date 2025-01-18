@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List, Tuple, Dict, Set, Optional
 
 
+
 class PieceType(Enum):
     QUEEN_BEE = 1
     SPIDER = 2
@@ -180,22 +181,36 @@ class HiveGame:
         """Get valid positions to move an existing piece"""
         moves = []
         piece = self.board[from_pos][-1]
+        print(f"\nChecking movements for {piece.piece_type} at ({from_pos.q}, {from_pos.r})")
         
         # Check if moving this piece would break the hive
         if not self._can_remove_piece(from_pos):
+            print(f"  Cannot remove piece - would break hive connectivity")
             return []
             
+        print(f"  Can safely remove piece, checking type-specific moves")
         if piece.piece_type == PieceType.QUEEN_BEE:
-            moves.extend(self._get_queen_moves(from_pos))
+            queen_moves = self._get_queen_moves(from_pos)
+            print(f"  Found {len(queen_moves)} Queen moves")
+            moves.extend(queen_moves)
         elif piece.piece_type == PieceType.SPIDER:
-            moves.extend(self._get_spider_moves(from_pos))
+            spider_moves = self._get_spider_moves(from_pos)
+            print(f"  Found {len(spider_moves)} Spider moves")
+            moves.extend(spider_moves)
         elif piece.piece_type == PieceType.BEETLE:
-            moves.extend(self._get_beetle_moves(from_pos))
+            beetle_moves = self._get_beetle_moves(from_pos)
+            print(f"  Found {len(beetle_moves)} Beetle moves")
+            moves.extend(beetle_moves)
         elif piece.piece_type == PieceType.GRASSHOPPER:
-            moves.extend(self._get_grasshopper_moves(from_pos))
+            grasshopper_moves = self._get_grasshopper_moves(from_pos)
+            print(f"  Found {len(grasshopper_moves)} Grasshopper moves")
+            moves.extend(grasshopper_moves)
         elif piece.piece_type == PieceType.ANT:
-            moves.extend(self._get_ant_moves(from_pos))
+            ant_moves = self._get_ant_moves(from_pos)
+            print(f"  Found {len(ant_moves)} Ant moves")
+            moves.extend(ant_moves)
             
+        print(f"  Total moves found: {len(moves)}")
         return moves
     
     def _get_queen_moves(self, pos: HexCoord) -> List[Tuple[HexCoord, HexCoord]]:
@@ -334,34 +349,53 @@ class HiveGame:
 
     def _can_remove_piece(self, pos: HexCoord) -> bool:
         """Check if removing a piece would break the hive"""
+        print(f"\nChecking if can remove piece at ({pos.q}, {pos.r})")
+        
         if len(self.board[pos]) > 1:  # Can always remove from stack
+            print("  Piece is in stack - can remove")
             return True
             
-        # Temporarily remove the piece
-        temp_board = self.board.copy()
+        # Create a deep copy of the board state
+        temp_board = {k: list(v) for k, v in self.board.items()}
+        # Remove the piece we're checking
         del temp_board[pos]
         
         if not temp_board:  # No other pieces
+            print("  No other pieces on board - can remove")
             return True
             
         # Use flood fill to check if all pieces are connected
         start_pos = next(iter(temp_board.keys()))
+        print(f"  Starting flood fill from ({start_pos.q}, {start_pos.r})")
         connected = self._flood_fill(start_pos, temp_board)
         
-        return len(connected) == len(temp_board)
+        # Check if all remaining pieces are connected
+        is_connected = len(connected) == len(temp_board)
+        print(f"  Found {len(connected)} connected pieces out of {len(temp_board)} total")
+        print(f"  Can{' ' if is_connected else 'not'} remove piece")
+        return is_connected
 
     def _flood_fill(self, start: HexCoord, board: Dict[HexCoord, List[Piece]]) -> Set[HexCoord]:
         """Returns set of all positions connected to start position"""
+        print(f"\nStarting flood fill from ({start.q}, {start.r})")
         connected = {start}
         stack = [start]
         
         while stack:
             current = stack.pop()
+            print(f"  Checking neighbors of ({current.q}, {current.r})")
+            
             for neighbor in current.get_neighbors():
                 if neighbor in board and neighbor not in connected:
+                    print(f"    Found connected piece at ({neighbor.q}, {neighbor.r})")
                     connected.add(neighbor)
                     stack.append(neighbor)
+                elif neighbor in board:
+                    print(f"    Already visited piece at ({neighbor.q}, {neighbor.r})")
+                elif neighbor not in board:
+                    print(f"    No piece at ({neighbor.q}, {neighbor.r})")
                     
+        print(f"Flood fill complete - found {len(connected)} connected pieces")
         return connected
 
     def is_game_over(self) -> Tuple[bool, int]:

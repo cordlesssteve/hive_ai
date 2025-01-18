@@ -60,8 +60,9 @@ class HiveNetwork(nn.Module):
 
 class MCTS:
     """Monte Carlo Tree Search for move selection"""
-    def __init__(self, network: HiveNetwork, num_simulations: int = 800):
-        self.network = network
+    def __init__(self, network: HiveNetwork, num_simulations: int = 10):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.network = network.to(self.device)
         self.num_simulations = num_simulations
 
     def select_move(self, game: HiveGame, temperature: float = 1.0) -> Tuple[Optional[HexCoord], HexCoord]:
@@ -203,14 +204,18 @@ class MCTSNode:
         
         # Get network prediction
         state_tensor = torch.FloatTensor(self.game.get_state()).unsqueeze(0)
+        if torch.cuda.is_available():
+            state_tensor = state_tensor.cuda()
         print(f"Created state tensor with shape: {state_tensor.shape}")
         
         with torch.no_grad():
             policy_logits, value = network(state_tensor)
             print(f"Network evaluation complete. Policy shape: {policy_logits.shape}")
         
-        # Process policy
+        # Process policy (move to CPU for numpy operations)
         policy = F.softmax(policy_logits.squeeze(), dim=0)
+        if policy.is_cuda:
+            policy = policy.cpu()
         print(f"Processing {len(valid_moves)} valid moves")
         
         # Create children nodes
@@ -229,6 +234,7 @@ class MCTSNode:
                 print(f"Failed to process move {move}: {str(e)}")
         
         print(f"Node expansion complete. Created {len(self.children)} children")
+        value = value.cpu() if value.is_cuda else value
         return value.item()
 
     def backup(self, value: float) -> None:
@@ -250,7 +256,10 @@ class MCTSNode:
 
 class SelfPlayTrainer:
     def __init__(self, network: HiveNetwork, optimizer: torch.optim.Optimizer):
-        self.network = network
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Training on device: {self.device}")
+        
+        self.network = network.to(self.device)
         self.optimizer = optimizer
         self.mcts = MCTS(network)
         
@@ -274,10 +283,9 @@ class SelfPlayTrainer:
             for move in valid_moves:
                 move_idx = self._move_to_index(move)
                 # Set 1 for the selected move, 0 for others
-                # Could be enhanced to use actual MCTS visit counts
                 policy[move_idx] = 1.0 if move == selected_move else 0.0
             
-            # Store data
+            # Store data (keep on CPU for now, will move to GPU in train_step)
             states.append(state)
             policies.append(policy)
             
@@ -293,23 +301,22 @@ class SelfPlayTrainer:
         for _ in range(len(states)):
             values.append(current_value)
             current_value = -current_value
-            
+        
         return list(zip(states, policies, values))
         
     def train_step(self, data: list) -> Tuple[float, float]:
         """Train network on a batch of data"""
         states, policies, values = zip(*data)
         
-        # Convert to tensors with correct shapes and types
-        state_tensor = torch.FloatTensor(np.array(states))
-        policy_tensor = torch.FloatTensor(np.array(policies))  # Changed from LongTensor
-        value_tensor = torch.FloatTensor(values)
+        # Move everything to GPU
+        state_tensor = torch.FloatTensor(np.array(states)).to(self.device)
+        policy_tensor = torch.FloatTensor(np.array(policies)).to(self.device)
+        value_tensor = torch.FloatTensor(values).to(self.device)
         
-        # Forward pass
+        # Forward pass (already on GPU since network is on GPU)
         policy_logits, value_pred = self.network(state_tensor)
         
-        # Calculate loss
-        # Changed from cross_entropy to KL divergence since we're using probability distributions
+        # Calculate loss (still on GPU)
         policy_loss = -(policy_tensor * F.log_softmax(policy_logits, dim=1)).sum(dim=1).mean()
         value_loss = F.mse_loss(value_pred.squeeze(), value_tensor)
         total_loss = policy_loss + value_loss
